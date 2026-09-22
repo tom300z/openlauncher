@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(
                 LocalDensity provides Density(
                     density   = baseDensity.density * settings.uiScale,
-                    fontScale = baseDensity.fontScale
+                    fontScale = baseDensity.fontScale * settings.textScale
                 )
             ) {
                 if (!settingsLoaded) {
@@ -111,7 +111,9 @@ class MainActivity : ComponentActivity() {
                     background = bg,
                     textColor  = textColor,
                     fontBold   = settings.fontBold,
-                    textScale  = settings.textScale,
+                    // Text scale is applied through LocalDensity so fixed-sp
+                    // labels in dialogs and menus scale consistently too.
+                    textScale  = 1.0f,
                     appFont    = settings.appFont,
                     isDayMode  = isDayMode,
                     useCustomBg = settings.useCustomBackgroundColor
@@ -146,8 +148,8 @@ class MainActivity : ComponentActivity() {
 
                         val sidebarContent: @Composable () -> Unit = {
                             val sidebarDensity = Density(
-                                density = baseDensity.density * (1.0f + (settings.uiScale - 1.0f) * 0.35f),
-                                fontScale = baseDensity.fontScale
+                                density = baseDensity.density * settings.uiScale * settings.sidebarScale,
+                                fontScale = baseDensity.fontScale * settings.textScale
                             )
                             CompositionLocalProvider(LocalDensity provides sidebarDensity) {
                                 Sidebar(

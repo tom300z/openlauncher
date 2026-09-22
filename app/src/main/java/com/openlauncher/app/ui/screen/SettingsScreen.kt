@@ -342,6 +342,21 @@ fun SettingsScreen(
 
         // ── Sidebar Shortcuts ─────────────────────────────────────────────────
         SettingsSection("Sidebar") {
+            SettingsRow(
+                label    = "Sidebar Size",
+                sublabel = "${"%.0f".format(settings.sidebarScale * 100)}% — includes icons",
+                icon     = Icons.Default.ZoomIn
+            ) {}
+            Slider(
+                value         = settings.sidebarScale,
+                onValueChange = { onUpdate { copy(sidebarScale = it) } },
+                valueRange    = 0.8f..1.6f,
+                steps         = 7,
+                colors        = sliderColors(accent),
+                modifier      = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+            )
+            SettingsDivider()
+
             settings.shortcuts.forEachIndexed { index, shortcut ->
                 if (index > 0) SettingsDivider()
                 SettingsRow(

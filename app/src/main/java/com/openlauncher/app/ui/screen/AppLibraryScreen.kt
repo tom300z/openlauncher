@@ -214,20 +214,20 @@ private fun AppTile(
             .padding(7.dp)
     ) {
         val bmp = remember(app.packageName) {
-            try { app.icon.toBitmap(80, 80) } catch (_: Exception) { null }
+            try { app.icon.toBitmap(112, 112) } catch (_: Exception) { null }
         }
         if (bmp != null) {
             androidx.compose.foundation.Image(
                 painter            = BitmapPainter(bmp.asImageBitmap()),
                 contentDescription = app.appName,
-                modifier           = Modifier.size(40.dp)
+                modifier           = Modifier.size(56.dp)
             )
         } else {
-            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                Text(app.appName.take(1).uppercase(), color = accent, fontSize = 18.sp)
+            Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
+                Text(app.appName.take(1).uppercase(), color = accent, fontSize = 24.sp)
             }
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
             text          = app.appName.uppercase(),
             style         = MaterialTheme.typography.labelSmall,
