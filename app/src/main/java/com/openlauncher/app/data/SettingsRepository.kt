@@ -59,6 +59,9 @@ class SettingsRepository(private val context: Context) {
         val SPEEDOMETER_DIGITAL_ONLY = booleanPreferencesKey("speedometer_digital_only")
         val GRADIENT_DIRECTION    = stringPreferencesKey("gradient_direction")
         val USE_CUSTOM_BG_COLOR   = booleanPreferencesKey("use_custom_bg_color")
+        val SHOW_BATTERY          = booleanPreferencesKey("show_battery")
+        val BATTERY_CURVE         = stringPreferencesKey("battery_curve")
+        val BATTERY_HISTORY_DAYS  = intPreferencesKey("battery_history_days")
     }
 
     val settingsFlow: Flow<AppSettings> = context.dataStore.data
@@ -134,7 +137,10 @@ class SettingsRepository(private val context: Context) {
                 vitalsAsBars     = prefs[Keys.VITALS_AS_BARS] ?: defaults.vitalsAsBars,
                 speedometerDigitalOnly = prefs[Keys.SPEEDOMETER_DIGITAL_ONLY] ?: defaults.speedometerDigitalOnly,
                 gradientDirection = prefs[Keys.GRADIENT_DIRECTION]?.let { runCatching { GradientDirection.valueOf(it) }.getOrNull() } ?: defaults.gradientDirection,
-                useCustomBackgroundColor = prefs[Keys.USE_CUSTOM_BG_COLOR] ?: defaults.useCustomBackgroundColor
+                useCustomBackgroundColor = prefs[Keys.USE_CUSTOM_BG_COLOR] ?: defaults.useCustomBackgroundColor,
+                showBattery       = prefs[Keys.SHOW_BATTERY] ?: defaults.showBattery,
+                batteryCurve      = prefs[Keys.BATTERY_CURVE]?.let { runCatching { BatteryCurve.valueOf(it) }.getOrNull() } ?: defaults.batteryCurve,
+                batteryHistoryDays = (prefs[Keys.BATTERY_HISTORY_DAYS] ?: defaults.batteryHistoryDays).coerceIn(1, 365)
             )
     }
 
@@ -191,6 +197,9 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.SPEEDOMETER_DIGITAL_ONLY] = s.speedometerDigitalOnly
             prefs[Keys.GRADIENT_DIRECTION] = s.gradientDirection.name
             prefs[Keys.USE_CUSTOM_BG_COLOR] = s.useCustomBackgroundColor
+            prefs[Keys.SHOW_BATTERY]       = s.showBattery
+            prefs[Keys.BATTERY_CURVE]      = s.batteryCurve.name
+            prefs[Keys.BATTERY_HISTORY_DAYS] = s.batteryHistoryDays.coerceIn(1, 365)
     }
 
     suspend fun resetToDefaults() {

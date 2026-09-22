@@ -34,12 +34,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
 import com.openlauncher.app.data.AppSettings
+import com.openlauncher.app.data.BATTERY_CURVES
+import com.openlauncher.app.data.BatteryCurve
 import com.openlauncher.app.data.ClockStyle
 import com.openlauncher.app.data.computeWidgetMove
 import com.openlauncher.app.data.GRID_COLS
 import com.openlauncher.app.data.GRID_ROWS
 import com.openlauncher.app.data.WidgetConfig
 import com.openlauncher.app.model.NowPlayingState
+import com.openlauncher.app.model.BatteryState
 import com.openlauncher.app.model.WeatherState
 import com.openlauncher.app.ui.theme.LocalDayMode
 import com.openlauncher.app.ui.widget.*
@@ -64,7 +67,8 @@ private val ALL_WIDGET_TYPES = listOf(
     WidgetTypeInfo("SPEEDOMETER", "SPEED",       Icons.Default.Speed,         "GPS speed"),
     WidgetTypeInfo("VITALS",      "VITALS",      Icons.Default.Dns,           "Head Unit Health / Vitals"),
     WidgetTypeInfo("TRIP_TRACKER", "TRIP TRACKER", Icons.Default.Map,          "Trip logs & stats"),
-    WidgetTypeInfo("SOUNDBOARD",  "SOUNDBOARD",  Icons.Default.Piano,         "Custom sound pads")
+    WidgetTypeInfo("SOUNDBOARD",  "SOUNDBOARD",  Icons.Default.Piano,         "Custom sound pads"),
+    WidgetTypeInfo("BATTERY",     "BATTERY",     Icons.Default.BatteryStd,    "Voltage, charge & history")
 )
 
 private fun canAddWidget(settings: com.openlauncher.app.data.AppSettings): Boolean {
@@ -78,6 +82,7 @@ private fun canAddWidget(settings: com.openlauncher.app.data.AppSettings): Boole
         if (settings.showVitals) add("VITALS")
         if (settings.showTripTracker) add("TRIP_TRACKER")
         if (settings.showSoundboard) add("SOUNDBOARD")
+        if (settings.showBattery) add("BATTERY")
     }
     val activeWidgets = settings.widgetLayout.filter { it.enabled && it.id in visibleIds }
     val occupied = buildSet<Pair<Int, Int>> {
@@ -103,6 +108,7 @@ fun HomeScreen(
     isWifi: Boolean,
     isData: Boolean,
     isDayMode: Boolean = false,
+    batteryState: BatteryState = BatteryState(),
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onPrev: () -> Unit,
@@ -123,6 +129,8 @@ fun HomeScreen(
     onSetClockStyle: (ClockStyle) -> Unit,
     onSetVitalsAsBars: (Boolean) -> Unit = {},
     onSetSpeedometerDigitalOnly: (Boolean) -> Unit = {},
+    onSetBatteryConfig: (BatteryCurve, Int) -> Unit = { _, _ -> },
+    onClearBatteryHistory: () -> Unit = {},
     onUpdateSoundPad: (index: Int, pad: com.openlauncher.app.data.SoundPadConfig) -> Unit = { _, _ -> },
     hardwareRadio: com.openlauncher.app.viewmodel.LauncherViewModel.HardwareRadioState? = null,
     onLaunchHardwareRadio: () -> Unit = {},
@@ -154,6 +162,7 @@ fun HomeScreen(
 
     var resizingId    by remember { mutableStateOf<String?>(null) }
     var contextMenuId by remember { mutableStateOf<String?>(null) }
+    var batteryConfigOpen by remember { mutableStateOf(false) }
 
     val configuration    = LocalConfiguration.current
     val isLandscape      = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -243,6 +252,7 @@ fun HomeScreen(
                 if (settings.showVitals) add("VITALS")
                 if (settings.showTripTracker) add("TRIP_TRACKER")
                 if (settings.showSoundboard) add("SOUNDBOARD")
+                if (settings.showBattery) add("BATTERY")
             }
 
             // Keep only visible widgets exactly as configured in settings, allowing explicit resizing to dictate layout
@@ -318,6 +328,7 @@ fun HomeScreen(
                     "SPEEDOMETER" -> "SPEED"
                     "TRIP_TRACKER" -> "TRIP"
                     "SOUNDBOARD"  -> "SOUND"
+                    "BATTERY"     -> "BATTERY"
                     else          -> w.id
                 }
 
@@ -474,6 +485,12 @@ fun HomeScreen(
                             onUpdatePad = onUpdateSoundPad,
                             modifier  = Modifier.fillMaxSize()
                         )
+                        "BATTERY" -> BatteryWidget(
+                            state       = batteryState,
+                            historyDays = settings.batteryHistoryDays,
+                            isDayMode   = isDayMode,
+                            modifier    = Modifier.fillMaxSize()
+                        )
                     }
 
                     // Label — hide when album art fills the widget background
@@ -506,6 +523,8 @@ fun HomeScreen(
             clockStyle          = settings.clockStyle,
             vitalsAsBars        = settings.vitalsAsBars,
             speedometerDigitalOnly = settings.speedometerDigitalOnly,
+            batteryCurve        = settings.batteryCurve,
+            batteryHistoryDays  = settings.batteryHistoryDays,
             carPlayPackage      = settings.carPlayPackage,
             androidAutoPackage  = settings.androidAutoPackage,
             pipAppPackage       = settings.pipAppPackage,
@@ -520,7 +539,23 @@ fun HomeScreen(
             onSetClockStyle     = { onSetClockStyle(it) },
             onSetVitalsAsBars   = { onSetVitalsAsBars(it) },
             onSetSpeedometerDigitalOnly = { onSetSpeedometerDigitalOnly(it) },
+            onConfigureBattery  = { contextMenuId = null; batteryConfigOpen = true },
             onDismiss           = { contextMenuId = null }
+        )
+    }
+
+    if (batteryConfigOpen) {
+        BatteryConfigDialog(
+            selectedCurve = settings.batteryCurve,
+            historyDays = settings.batteryHistoryDays,
+            accent = accent,
+            isDayMode = isDayMode,
+            onDismiss = { batteryConfigOpen = false },
+            onConfirm = { curve, days ->
+                onSetBatteryConfig(curve, days)
+                batteryConfigOpen = false
+            },
+            onClearHistory = onClearBatteryHistory
         )
     }
 
@@ -561,6 +596,8 @@ private fun WidgetContextMenu(
     clockStyle: ClockStyle,
     vitalsAsBars: Boolean,
     speedometerDigitalOnly: Boolean,
+    batteryCurve: BatteryCurve,
+    batteryHistoryDays: Int,
     carPlayPackage: String = "",
     androidAutoPackage: String = "",
     pipAppPackage: String = "",
@@ -575,6 +612,7 @@ private fun WidgetContextMenu(
     onSetClockStyle: (ClockStyle) -> Unit,
     onSetVitalsAsBars: (Boolean) -> Unit,
     onSetSpeedometerDigitalOnly: (Boolean) -> Unit,
+    onConfigureBattery: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val menuBg    = if (isDayMode) Color(0xFFFFFFFF) else Color(0xFF111111)
@@ -645,6 +683,23 @@ private fun WidgetContextMenu(
                     isDayMode = isDayMode
                 )
             }
+            if (widgetId == "BATTERY") {
+                HorizontalDivider(color = menuDivider)
+                ContextRow(
+                    label = "BATTERY SETTINGS",
+                    icon = Icons.Default.Settings,
+                    tint = accent,
+                    onClick = onConfigureBattery,
+                    isDayMode = isDayMode
+                )
+                Text(
+                    text = "${BATTERY_CURVES.first { it.type == batteryCurve }.displayName.uppercase()} · $batteryHistoryDays DAYS",
+                    color = inactiveMenuTint,
+                    fontSize = 7.sp,
+                    letterSpacing = 0.5.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp)
+                )
+            }
             if (widgetId == "NOW_PLAYING") {
                 HorizontalDivider(color = menuDivider)
                 ContextRow("ASSIGN CARPLAY APP",      Icons.Default.PhoneAndroid,  accent, onAssignCarPlay, isDayMode = isDayMode)
@@ -661,6 +716,110 @@ private fun WidgetContextMenu(
             }
 
         }
+    }
+}
+
+@Composable
+private fun BatteryConfigDialog(
+    selectedCurve: BatteryCurve,
+    historyDays: Int,
+    accent: Color,
+    isDayMode: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (BatteryCurve, Int) -> Unit,
+    onClearHistory: () -> Unit
+) {
+    var curve by remember(selectedCurve) { mutableStateOf(selectedCurve) }
+    var days by remember(historyDays) { mutableIntStateOf(historyDays.coerceIn(1, 365)) }
+    var confirmClear by remember { mutableStateOf(false) }
+    val background = if (isDayMode) Color.White else Color(0xFF0C0C0C)
+    val text = if (isDayMode) Color(0xFF111111) else Color.White
+    val secondary = if (isDayMode) Color(0xFF6C757D) else Color(0xFF777777)
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .widthIn(min = 360.dp, max = 520.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(background)
+                .border(1.dp, if (isDayMode) Color(0xFFCCCCCC) else Color(0xFF242424), RoundedCornerShape(4.dp))
+                .padding(18.dp)
+        ) {
+            Text("BATTERY SETTINGS", color = text, fontSize = 13.sp, letterSpacing = 2.sp)
+            Spacer(Modifier.height(12.dp))
+            Text("VOLTAGE CURVE", color = secondary, fontSize = 8.sp, letterSpacing = 1.sp)
+            Spacer(Modifier.height(5.dp))
+            BATTERY_CURVES.forEach { definition ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { curve = definition.type }
+                        .padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = curve == definition.type,
+                        onClick = { curve = definition.type },
+                        colors = RadioButtonDefaults.colors(selectedColor = accent)
+                    )
+                    Text(definition.displayName, color = text, fontSize = 11.sp)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text("HISTORY WINDOW", color = secondary, fontSize = 8.sp, letterSpacing = 1.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                IconButton(onClick = { days = (days - 1).coerceAtLeast(1) }) {
+                    Icon(Icons.Default.Remove, "Decrease days", tint = secondary)
+                }
+                Text(
+                    text = "$days DAYS",
+                    color = text,
+                    fontSize = 16.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.width(100.dp)
+                )
+                IconButton(onClick = { days = (days + 1).coerceAtMost(365) }) {
+                    Icon(Icons.Default.Add, "Increase days", tint = secondary)
+                }
+            }
+            Text(
+                "Readings are grouped into 6-second windows; only each window's highest voltage is retained.",
+                color = secondary,
+                fontSize = 8.sp,
+                lineHeight = 11.sp
+            )
+            Spacer(Modifier.height(14.dp))
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { confirmClear = true }) {
+                    Text("CLEAR HISTORY", color = Color(0xFFE05252))
+                }
+                Spacer(Modifier.weight(1f))
+                TextButton(onClick = onDismiss) { Text("CANCEL", color = secondary) }
+                TextButton(onClick = { onConfirm(curve, days) }) { Text("SAVE", color = accent) }
+            }
+        }
+    }
+
+    if (confirmClear) {
+        AlertDialog(
+            onDismissRequest = { confirmClear = false },
+            title = { Text("CLEAR BATTERY HISTORY?") },
+            text = { Text("All stored voltage high/low statistics will be deleted. The live voltage and battery settings are kept.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onClearHistory()
+                    confirmClear = false
+                }) { Text("CLEAR", color = Color(0xFFE05252)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClear = false }) { Text("CANCEL") }
+            }
+        )
     }
 }
 
@@ -839,6 +998,7 @@ private fun WidgetLibraryDialog(
         if (settings.showVitals) add("VITALS")
         if (settings.showTripTracker) add("TRIP_TRACKER")
         if (settings.showSoundboard) add("SOUNDBOARD")
+        if (settings.showBattery) add("BATTERY")
     }
     val canAdd = canAddWidget(settings)
 
