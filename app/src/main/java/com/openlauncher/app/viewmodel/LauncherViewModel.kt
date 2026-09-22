@@ -373,28 +373,32 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _weatherError = MutableStateFlow<String?>(null)
     val weatherError: StateFlow<String?> = _weatherError
 
-    private var weatherJob: Job? = null
-
-    fun fetchWeather(lat: Double, lon: Double, metric: Boolean) {
-        weatherJob?.cancel()
-        weatherJob = viewModelScope.launch {
-            try {
-                // Always request celsius — the state stores celsius and the widget
-                // converts for display, so requesting fahrenheit just round-tripped
-                // the value through two lossy conversions
-                val resp = WeatherApi.service.getForecast(lat, lon, temperatureUnit = "celsius")
-                resp.currentWeather?.let { cw ->
-                    _weather.value = WeatherState(
-                        temperatureCelsius = cw.temperature,
-                        weatherCode       = cw.weathercode,
-                        windspeedKmh      = cw.windspeed,
-                        isDay             = cw.isDay == 1
-                    )
-                }
+    private suspend fun fetchWeather(lat: Double, lon: Double): Boolean {
+        return try {
+            // Always request celsius — the state stores celsius and the widget
+            // converts for display, so requesting fahrenheit just round-tripped
+            // the value through two lossy conversions.
+            val current = WeatherApi.service
+                .getForecast(lat, lon, temperatureUnit = "celsius")
+                .currentWeather
+            if (current == null) {
+                _weatherError.value = "Weather response contained no current conditions"
+                false
+            } else {
+                _weather.value = WeatherState(
+                    temperatureCelsius = current.temperature,
+                    weatherCode       = current.weathercode,
+                    windspeedKmh      = current.windspeed,
+                    isDay             = current.isDay == 1
+                )
                 _weatherError.value = null
-            } catch (e: Exception) {
-                _weatherError.value = e.message
+                true
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            _weatherError.value = error.message ?: error.javaClass.simpleName
+            false
         }
     }
 
@@ -654,19 +658,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         loadInstalledApps()
         refreshConnectivity()
         if (hasSzchoicewayMcu) startHardwareRadioObserver()
-        // Fetch weather on first location fix, then every 30 minutes.
-        // The minute ticker covers the parked case where no location updates arrive.
+        // Wait for the first location, then retry failures quickly. Only a
+        // successful response starts the normal 30-minute refresh interval.
+        // Weather remains intentionally in-memory and is fetched anew whenever
+        // the launcher process starts.
         viewModelScope.launch {
-            var lastFetchMs = 0L
-            merge(
-                locationMgr.location.filterNotNull(),
-                minuteTicker.mapNotNull { locationMgr.location.value }
-            ).collect { loc ->
-                val now = System.currentTimeMillis()
-                if (now - lastFetchMs >= 30 * 60 * 1_000L) {
-                    lastFetchMs = now
-                    fetchWeather(loc.latitude, loc.longitude, settings.value.unitSystem.name == "METRIC")
-                }
+            while (isActive) {
+                val loc = locationMgr.location.filterNotNull().first()
+                val succeeded = fetchWeather(loc.latitude, loc.longitude)
+                delay(if (succeeded) 30 * 60 * 1_000L else 5_000L)
             }
         }
     }
