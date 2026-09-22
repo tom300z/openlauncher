@@ -13,6 +13,9 @@ import android.provider.Settings as AndroidSettings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.openlauncher.app.data.AppSettings
+import com.openlauncher.app.data.BatteryVoltageMonitor
+import com.openlauncher.app.data.BatteryVoltageMonitor.Companion.CHARGING_THRESHOLD_VOLTS
+import com.openlauncher.app.data.BatteryVoltageMonitor.Companion.SETTLING_DURATION_MS
 import com.openlauncher.app.data.DayNightMode
 import com.openlauncher.app.data.DefaultShortcutIcon
 import com.openlauncher.app.data.GRID_COLS
@@ -24,8 +27,11 @@ import com.openlauncher.app.data.WeatherApi
 import com.openlauncher.app.data.activeWidgetIds
 import com.openlauncher.app.data.computeWidgetMove
 import com.openlauncher.app.data.defaultShortcuts
+import com.openlauncher.app.data.batteryPercent
+import com.openlauncher.app.data.currentLocalEpochDay
 import com.openlauncher.app.util.SunriseSunset
 import com.openlauncher.app.model.AppInfo
+import com.openlauncher.app.model.BatteryState
 import com.openlauncher.app.model.NavDestination
 import com.openlauncher.app.model.NowPlayingState
 import com.openlauncher.app.model.WeatherState
@@ -39,6 +45,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private val settingsRepo = SettingsRepository(application)
     private val locationMgr  = LocationCompassManager(application)
+    private val batteryMonitor = BatteryVoltageMonitor(application)
 
     // ── Settings ──────────────────────────────────────────────────────────────
     private val _settingsLoaded = MutableStateFlow(false)
@@ -48,12 +55,32 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         .onEach { _settingsLoaded.value = true }
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
 
+    val batteryState: StateFlow<BatteryState> = combine(settings, batteryMonitor.snapshot) { config, sample ->
+        val firstDay = currentLocalEpochDay() - config.batteryHistoryDays + 1
+        val history = sample.history.filter { it.epochDay >= firstDay }
+        BatteryState(
+            voltage = sample.voltage,
+            chargePercent = sample.voltage?.let { batteryPercent(it, config.batteryCurve) },
+            highestVoltage = history.maxOfOrNull { it.maximum },
+            lowestVoltage = history.minOfOrNull { it.minimum },
+            connected = sample.connected,
+            isCharging = sample.voltage?.let { it > CHARGING_THRESHOLD_VOLTS } == true,
+            isSettling = sample.voltage?.let { it <= CHARGING_THRESHOLD_VOLTS } == true &&
+                sample.lastChargingAtMillis > 0L &&
+                System.currentTimeMillis() < sample.lastChargingAtMillis + SETTLING_DURATION_MS
+        )
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, BatteryState())
+
     fun updateSettings(block: AppSettings.() -> AppSettings) {
         viewModelScope.launch { settingsRepo.updateSettings { it.block() } }
     }
 
     fun resetSettings() {
         viewModelScope.launch { settingsRepo.resetToDefaults() }
+    }
+
+    fun clearBatteryHistory() {
+        batteryMonitor.clearHistory()
     }
 
     // ── Navigation ────────────────────────────────────────────────────────────
@@ -219,6 +246,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 "VITALS"      -> copy(showVitals = true)
                 "TRIP_TRACKER" -> copy(showTripTracker = true)
                 "SOUNDBOARD"  -> copy(showSoundboard = true)
+                "BATTERY"     -> copy(showBattery = true)
                 else          -> this
             }
             val idx       = layout.indexOfFirst { it.id == id }
@@ -250,6 +278,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 "VITALS"      -> copy(showVitals = false)
                 "TRIP_TRACKER" -> copy(showTripTracker = false)
                 "SOUNDBOARD"  -> copy(showSoundboard = false)
+                "BATTERY"     -> copy(showBattery = false)
                 else          -> this
             }
         }
@@ -646,6 +675,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     override fun onCleared() {
         super.onCleared()
         locationMgr.stop()
+        batteryMonitor.stop()
         radioObserver?.let { getApplication<Application>().contentResolver.unregisterContentObserver(it) }
         radioObserver = null
     }
@@ -653,6 +683,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     init {
         loadInstalledApps()
         refreshConnectivity()
+        batteryMonitor.start(viewModelScope)
         if (hasSzchoicewayMcu) startHardwareRadioObserver()
         // Fetch weather on first location fix, then every 30 minutes.
         // The minute ticker covers the parked case where no location updates arrive.

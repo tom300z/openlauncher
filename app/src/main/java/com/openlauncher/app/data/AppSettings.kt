@@ -9,6 +9,7 @@ enum class AppFont { SYSTEM, JETBRAINS_MONO, SOURCE_CODE_PRO }
 enum class DayNightMode { DARK, LIGHT, AUTO, SYSTEM }
 enum class SidebarPosition { LEFT, RIGHT, BOTTOM }
 enum class GradientDirection { TOP_TO_BOTTOM, LEFT_TO_RIGHT, DIAGONAL, RADIAL }
+enum class BatteryCurve { FLOODED, AGM, EFB, GEL, LIFEPO4 }
 
 enum class DefaultShortcutIcon {
     NONE,
@@ -54,7 +55,7 @@ const val GRID_COLS = 3
 const val GRID_ROWS = 2
 
 data class WidgetConfig(
-    val id: String,          // "CLOCK" | "WEATHER" | "TELEMETRY" | "NOW_PLAYING"
+    val id: String,          // "CLOCK" | "WEATHER" | "TELEMETRY" | "NOW_PLAYING" | ...
     val gridX: Int,          // column 0..(GRID_COLS-1)
     val gridY: Int,          // row    0..(GRID_ROWS-1)
     val spanX: Int = 1,
@@ -103,7 +104,10 @@ data class AppSettings(
     val vitalsAsBars: Boolean = false,
     val speedometerDigitalOnly: Boolean = false,
     val gradientDirection: GradientDirection = GradientDirection.DIAGONAL,
-    val useCustomBackgroundColor: Boolean = false
+    val useCustomBackgroundColor: Boolean = false,
+    val showBattery: Boolean = false,
+    val batteryCurve: BatteryCurve = BatteryCurve.AGM,
+    val batteryHistoryDays: Int = 7
 )
 
 fun defaultShortcuts() = listOf(
@@ -130,6 +134,7 @@ fun AppSettings.activeWidgetIds(): Set<String> = buildSet {
     if (showVitals) add("VITALS")
     if (showTripTracker) add("TRIP_TRACKER")
     if (showSoundboard) add("SOUNDBOARD")
+    if (showBattery) add("BATTERY")
 }
 
 /**

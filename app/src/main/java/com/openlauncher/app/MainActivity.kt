@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
             val isData      by vm.isData.collectAsStateWithLifecycle()
             val isDayModeVM by vm.isDayMode.collectAsStateWithLifecycle()
             val hardwareRadio by vm.hardwareRadio.collectAsStateWithLifecycle()
+            val batteryState by vm.batteryState.collectAsStateWithLifecycle()
             val systemIsDark = isSystemInDarkTheme()
             val isDayMode = if (settings.dayNightMode == DayNightMode.SYSTEM) !systemIsDark else isDayModeVM
             val pickerSlot      by vm.shortcutPickerSlot.collectAsStateWithLifecycle()
@@ -197,6 +198,7 @@ class MainActivity : ComponentActivity() {
                                         isWifi              = isWifi,
                                         isData              = isData,
                                         isDayMode           = isDayMode,
+                                        batteryState        = batteryState,
                                         onPlayPause         = vm::playPause,
                                         onNext              = vm::skipNext,
                                         onPrev              = vm::skipPrev,
@@ -220,6 +222,8 @@ class MainActivity : ComponentActivity() {
                                         onSetClockStyle     = { style -> vm.updateSettings { copy(clockStyle = style) } },
                                         onSetVitalsAsBars   = { asBars -> vm.updateSettings { copy(vitalsAsBars = asBars) } },
                                         onSetSpeedometerDigitalOnly = { digital -> vm.updateSettings { copy(speedometerDigitalOnly = digital) } },
+                                        onSetBatteryConfig  = { curve, days -> vm.updateSettings { copy(batteryCurve = curve, batteryHistoryDays = days) } },
+                                        onClearBatteryHistory = vm::clearBatteryHistory,
                                         onUpdateSoundPad    = { idx, pad -> vm.updateSoundboardPad(idx, pad) },
                                         hardwareRadio         = hardwareRadio,
                                         onLaunchHardwareRadio = { vm.launchHardwareRadioApp() },
