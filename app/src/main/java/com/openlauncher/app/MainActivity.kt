@@ -244,7 +244,9 @@ class MainActivity : ComponentActivity() {
                                             com.openlauncher.app.viewmodel.LauncherViewModel.AppPickerTarget.RADIO        -> "CHOOSE RADIO APP"
                                             else -> "CHOOSE CARPLAY APP"
                                         },
+                                        showHiddenApps      = settings.showHiddenApps,
                                         accent              = accent,
+                                        onShowHiddenAppsChange = { show -> vm.updateSettings { copy(showHiddenApps = show) } },
                                         onAppClick          = { app -> vm.launchApp(app.packageName) },
                                         onPickerSelect      = { slot, app -> vm.assignShortcut(slot, app) },
                                         onCarPlaySelect     = { app -> vm.assignPickerApp(app) }

@@ -86,6 +86,7 @@ data class AppSettings(
     val gradientEndColor: Int = Color.Black.toArgb(),
     val wallpaperDim: Float = 0.55f,
     val sidebarPosition: SidebarPosition = SidebarPosition.LEFT,
+    val showHiddenApps: Boolean = false,
     val bottomBarShortcutsRight: Boolean = false,
     val showAltimeter: Boolean = false,
     val showSpeedometer: Boolean = false,
