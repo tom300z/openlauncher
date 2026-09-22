@@ -215,7 +215,6 @@ fun Sidebar(
 
             HorizontalDivider(color = dividerColor)
             navButtons()
-            Spacer(Modifier.height(4.dp))
         }
     }
 
