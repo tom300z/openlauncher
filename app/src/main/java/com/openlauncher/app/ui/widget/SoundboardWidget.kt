@@ -30,7 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import com.openlauncher.app.ui.components.ScaledDialog
 import com.openlauncher.app.data.SoundPadConfig
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -172,7 +172,7 @@ private fun PadAssignDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    ScaledDialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
                 .clip(RoundedCornerShape(6.dp))
