@@ -88,6 +88,7 @@ data class AppSettings(
     val wallpaperDim: Float = 0.55f,
     val sidebarPosition: SidebarPosition = SidebarPosition.LEFT,
     val sidebarScale: Float = 1.15f,
+    val showHiddenApps: Boolean = false,
     val bottomBarShortcutsRight: Boolean = false,
     val showAltimeter: Boolean = false,
     val showSpeedometer: Boolean = false,

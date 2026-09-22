@@ -343,9 +343,29 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             _appsLoading.value = true
             val pm = getApplication<Application>().packageManager
 
+            // A conventional launcher surface is based on enabled activities that
+            // advertise themselves in a launcher. Keep the full enabled package
+            // list too, so the UI can optionally reveal non-launcher/hidden apps.
+            val launcherPackages = sequenceOf(
+                Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
+                Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+            ).flatMap { intent -> pm.queryIntentActivities(intent, 0).asSequence() }
+                .map { it.activityInfo.packageName }
+                .toSet()
+
             // Use getInstalledApplications — same source Android Settings uses,
             // catches apps with no launcher/ACTION_MAIN activity (e.g. CarPlay companions)
             _apps.value = pm.getInstalledApplications(0)
+                .filter { appInfo ->
+                    val enabledSetting = runCatching {
+                        pm.getApplicationEnabledSetting(appInfo.packageName)
+                    }.getOrDefault(android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT)
+                    when (enabledSetting) {
+                        android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> appInfo.enabled
+                        android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
+                        else -> false
+                    }
+                }
                 .mapNotNull { appInfo ->
                     try {
                         val label = pm.getApplicationLabel(appInfo).toString()
@@ -354,7 +374,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                             packageName = appInfo.packageName,
                             appName     = label,
                             icon        = pm.getApplicationIcon(appInfo),
-                            isSystemApp = (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+                            isSystemApp = (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0,
+                            isLaunchable = appInfo.packageName in launcherPackages
                         )
                     } catch (_: Exception) { null }
                 }

@@ -45,6 +45,7 @@ class SettingsRepository(private val context: Context) {
         val RIGHT_HAND_DRIVE      = booleanPreferencesKey("right_hand_drive") // kept for migration
         val SIDEBAR_POSITION           = stringPreferencesKey("sidebar_position")
         val SIDEBAR_SCALE              = floatPreferencesKey("sidebar_scale")
+        val SHOW_HIDDEN_APPS           = booleanPreferencesKey("show_hidden_apps")
         val BOTTOM_BAR_SHORTCUTS_RIGHT = booleanPreferencesKey("bottom_bar_shortcuts_right")
         val DAY_NIGHT_MODE        = stringPreferencesKey("day_night_mode")
         val SHOW_PIP              = booleanPreferencesKey("show_pip")
@@ -121,6 +122,7 @@ class SettingsRepository(private val context: Context) {
                 sidebarPosition  = prefs[Keys.SIDEBAR_POSITION]?.let { runCatching { SidebarPosition.valueOf(it) }.getOrNull() }
                                    ?: if (prefs[Keys.RIGHT_HAND_DRIVE] == true) SidebarPosition.RIGHT else defaults.sidebarPosition,
                 sidebarScale     = (prefs[Keys.SIDEBAR_SCALE] ?: defaults.sidebarScale).coerceIn(0.8f, 1.6f),
+                showHiddenApps   = prefs[Keys.SHOW_HIDDEN_APPS] ?: defaults.showHiddenApps,
                 bottomBarShortcutsRight = prefs[Keys.BOTTOM_BAR_SHORTCUTS_RIGHT] ?: defaults.bottomBarShortcutsRight,
                 dayNightMode     = prefs[Keys.DAY_NIGHT_MODE]?.let { runCatching { DayNightMode.valueOf(it) }.getOrNull() } ?: defaults.dayNightMode,
                 showPip          = prefs[Keys.SHOW_PIP]         ?: defaults.showPip,
@@ -185,6 +187,7 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.WALLPAPER_DIM]      = s.wallpaperDim
             prefs[Keys.SIDEBAR_POSITION]           = s.sidebarPosition.name
             prefs[Keys.SIDEBAR_SCALE]              = s.sidebarScale.coerceIn(0.8f, 1.6f)
+            prefs[Keys.SHOW_HIDDEN_APPS]           = s.showHiddenApps
             prefs[Keys.BOTTOM_BAR_SHORTCUTS_RIGHT] = s.bottomBarShortcutsRight
             prefs[Keys.DAY_NIGHT_MODE]     = s.dayNightMode.name
             prefs[Keys.SHOW_PIP]           = s.showPip
