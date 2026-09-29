@@ -66,7 +66,7 @@ fun SpeedometerWidget(
                 Text(
                     text          = "%.0f".format(speedDisplay),
                     color         = contentColor,
-                    fontSize      = 54.sp,
+                    fontSize      = 72.sp,
                     fontWeight    = androidx.compose.ui.text.font.FontWeight.SemiBold,
                     letterSpacing = (-1.5).sp
                 )
@@ -74,7 +74,7 @@ fun SpeedometerWidget(
                 Text(
                     text          = unitLabel,
                     color         = contentColor.copy(alpha = subAlpha * 1.5f),
-                    fontSize      = 10.sp,
+                    fontSize      = 16.sp,
                     fontWeight    = androidx.compose.ui.text.font.FontWeight.Bold,
                     letterSpacing = 2.sp
                 )
@@ -164,13 +164,13 @@ fun SpeedometerWidget(
                 Text(
                     text          = "%.0f".format(speedDisplay),
                     color         = contentColor,
-                    fontSize      = 34.sp,
+                    fontSize      = 52.sp,
                     letterSpacing = (-1).sp
                 )
                 Text(
                     text          = unitLabel,
                     color         = contentColor.copy(alpha = subAlpha),
-                    fontSize      = 8.sp,
+                    fontSize      = 14.sp,
                     letterSpacing = 2.sp
                 )
             }
