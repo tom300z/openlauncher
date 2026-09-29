@@ -102,6 +102,10 @@ data class AppSettings(
     val soundboardPads: List<SoundPadConfig> = defaultSoundboardPads(),
     val vitalsAsBars: Boolean = false,
     val speedometerDigitalOnly: Boolean = false,
+    val speedometerMaxKph: Int = 160,
+    val speedometerSegmentKph: Int = 20,
+    val speedometerMinorTicks: Boolean = true,
+    val speedometerReferenceNumbers: Boolean = true,
     val gradientDirection: GradientDirection = GradientDirection.DIAGONAL,
     val useCustomBackgroundColor: Boolean = false
 )

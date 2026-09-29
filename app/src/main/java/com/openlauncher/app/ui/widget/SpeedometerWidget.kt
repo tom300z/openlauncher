@@ -28,9 +28,16 @@ fun SpeedometerWidget(
     accent: Color,
     isDayMode: Boolean = false,
     digitalOnly: Boolean = false,
+    maxKph: Int = 160,
+    segmentKph: Int = 20,
+    minorTicks: Boolean = true,
+    referenceNumbers: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    val maxSpeed     = if (isMetric) 200f else 124f
+    val dialMaxKph = maxKph.coerceIn(40, 400)
+    val majorStepKph = segmentKph.coerceIn(10, 100)
+    val displayFactor = if (isMetric) 1f else 1f / 1.609344f
+    val maxSpeed = dialMaxKph * displayFactor
     val speedDisplay = ((location?.speedMps ?: 0f) * if (isMetric) 3.6f else 2.237f).coerceAtLeast(0f)
     val unitLabel    = if (isMetric) "KM/H" else "MPH"
     val trackAlpha   = if (isDayMode) 0.18f else 0.07f
@@ -114,10 +121,17 @@ fun SpeedometerWidget(
                     )
                 }
 
-                for (i in 0..10) {
-                    val angle   = startAngle + i * (sweepTotal / 10f)
+                // Half-interval positions keep minor ticks exactly midway between
+                // majors. Always include the scale endpoint, even if the chosen
+                // interval does not divide the maximum evenly.
+                val halfStepKph = majorStepKph / 2
+                val tickSpeeds = (0..dialMaxKph step halfStepKph).toMutableList()
+                if (tickSpeeds.last() != dialMaxKph) tickSpeeds.add(dialMaxKph)
+                for (tickKph in tickSpeeds) {
+                    val isMajor = tickKph % majorStepKph == 0 || tickKph == dialMaxKph
+                    if (!isMajor && !minorTicks) continue
+                    val angle   = startAngle + tickKph.toFloat() / dialMaxKph * sweepTotal
                     val rad     = Math.toRadians(angle.toDouble())
-                    val isMajor = i % 2 == 0
                     val outerR  = arcR - trackW / 2f - 3.dp.toPx()
                     val innerR  = outerR - if (isMajor) 7.dp.toPx() else 4.dp.toPx()
                     drawLine(
@@ -126,9 +140,9 @@ fun SpeedometerWidget(
                         end         = Offset(cx + (innerR * cos(rad)).toFloat(), cy + (innerR * sin(rad)).toFloat()),
                         strokeWidth = if (isMajor) 1.5.dp.toPx() else 0.8.dp.toPx()
                     )
-                    if (isMajor) {
+                    if (isMajor && referenceNumbers) {
                         val label = textMeasurer.measure(
-                            text = (maxSpeed * i / 10f).roundToInt().toString(),
+                            text = (tickKph * displayFactor).roundToInt().toString(),
                             style = referenceStyle
                         )
                         val labelR = innerR - 5.dp.toPx() - label.size.height / 2f

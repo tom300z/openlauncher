@@ -34,6 +34,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
 import com.openlauncher.app.data.AppSettings
+import com.openlauncher.app.ui.components.SpeedometerConfigDialog
 import com.openlauncher.app.data.ClockStyle
 import com.openlauncher.app.data.computeWidgetMove
 import com.openlauncher.app.data.GRID_COLS
@@ -123,6 +124,7 @@ fun HomeScreen(
     onSetClockStyle: (ClockStyle) -> Unit,
     onSetVitalsAsBars: (Boolean) -> Unit = {},
     onSetSpeedometerDigitalOnly: (Boolean) -> Unit = {},
+    onSetSpeedometerConfig: (Int, Int, Boolean, Boolean) -> Unit = { _, _, _, _ -> },
     onUpdateSoundPad: (index: Int, pad: com.openlauncher.app.data.SoundPadConfig) -> Unit = { _, _ -> },
     hardwareRadio: com.openlauncher.app.viewmodel.LauncherViewModel.HardwareRadioState? = null,
     onLaunchHardwareRadio: () -> Unit = {},
@@ -154,6 +156,7 @@ fun HomeScreen(
 
     var resizingId    by remember { mutableStateOf<String?>(null) }
     var contextMenuId by remember { mutableStateOf<String?>(null) }
+    var speedometerSettingsOpen by remember { mutableStateOf(false) }
 
     val configuration    = LocalConfiguration.current
     val isLandscape      = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -451,6 +454,10 @@ fun HomeScreen(
                             accent    = accent,
                             isDayMode = isDayMode,
                             digitalOnly = settings.speedometerDigitalOnly,
+                            maxKph = settings.speedometerMaxKph,
+                            segmentKph = settings.speedometerSegmentKph,
+                            minorTicks = settings.speedometerMinorTicks,
+                            referenceNumbers = settings.speedometerReferenceNumbers,
                             modifier  = Modifier.fillMaxSize()
                         )
                         "VITALS" -> VitalsWidget(
@@ -520,7 +527,21 @@ fun HomeScreen(
             onSetClockStyle     = { onSetClockStyle(it) },
             onSetVitalsAsBars   = { onSetVitalsAsBars(it) },
             onSetSpeedometerDigitalOnly = { onSetSpeedometerDigitalOnly(it) },
+            onOpenSpeedometerSettings = { contextMenuId = null; speedometerSettingsOpen = true },
             onDismiss           = { contextMenuId = null }
+        )
+    }
+
+    if (speedometerSettingsOpen) {
+        SpeedometerConfigDialog(
+            settings = settings,
+            accent = accent,
+            isDayMode = isDayMode,
+            onDismiss = { speedometerSettingsOpen = false },
+            onSave = { max, segment, minor, numbers ->
+                onSetSpeedometerConfig(max, segment, minor, numbers)
+                speedometerSettingsOpen = false
+            }
         )
     }
 
@@ -575,6 +596,7 @@ private fun WidgetContextMenu(
     onSetClockStyle: (ClockStyle) -> Unit,
     onSetVitalsAsBars: (Boolean) -> Unit,
     onSetSpeedometerDigitalOnly: (Boolean) -> Unit,
+    onOpenSpeedometerSettings: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val menuBg    = if (isDayMode) Color(0xFFFFFFFF) else Color(0xFF111111)
@@ -628,6 +650,9 @@ private fun WidgetContextMenu(
                 )
             }
             if (widgetId == "SPEEDOMETER") {
+                HorizontalDivider(color = menuDivider)
+                ContextRow("SPEEDOMETER SETTINGS", Icons.Default.Settings, accent,
+                    onOpenSpeedometerSettings, isDayMode = isDayMode)
                 HorizontalDivider(color = menuDivider)
                 ContextRow(
                     label   = "DIAL TRACK",
