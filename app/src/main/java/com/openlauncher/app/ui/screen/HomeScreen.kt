@@ -123,8 +123,7 @@ fun HomeScreen(
     onRemoveWidget: (id: String) -> Unit,
     onSetClockStyle: (ClockStyle) -> Unit,
     onSetVitalsAsBars: (Boolean) -> Unit = {},
-    onSetSpeedometerDigitalOnly: (Boolean) -> Unit = {},
-    onSetSpeedometerConfig: (Int, Int, Boolean, Boolean) -> Unit = { _, _, _, _ -> },
+    onSetSpeedometerConfig: (Int, Int, Boolean, Boolean, Boolean) -> Unit = { _, _, _, _, _ -> },
     onUpdateSoundPad: (index: Int, pad: com.openlauncher.app.data.SoundPadConfig) -> Unit = { _, _ -> },
     hardwareRadio: com.openlauncher.app.viewmodel.LauncherViewModel.HardwareRadioState? = null,
     onLaunchHardwareRadio: () -> Unit = {},
@@ -512,7 +511,6 @@ fun HomeScreen(
             accent              = accent,
             clockStyle          = settings.clockStyle,
             vitalsAsBars        = settings.vitalsAsBars,
-            speedometerDigitalOnly = settings.speedometerDigitalOnly,
             carPlayPackage      = settings.carPlayPackage,
             androidAutoPackage  = settings.androidAutoPackage,
             pipAppPackage       = settings.pipAppPackage,
@@ -526,7 +524,6 @@ fun HomeScreen(
             onClearPip          = { contextMenuId = null; onClearPip() },
             onSetClockStyle     = { onSetClockStyle(it) },
             onSetVitalsAsBars   = { onSetVitalsAsBars(it) },
-            onSetSpeedometerDigitalOnly = { onSetSpeedometerDigitalOnly(it) },
             onOpenSpeedometerSettings = { contextMenuId = null; speedometerSettingsOpen = true },
             onDismiss           = { contextMenuId = null }
         )
@@ -538,8 +535,8 @@ fun HomeScreen(
             accent = accent,
             isDayMode = isDayMode,
             onDismiss = { speedometerSettingsOpen = false },
-            onSave = { max, segment, minor, numbers ->
-                onSetSpeedometerConfig(max, segment, minor, numbers)
+            onSave = { max, segment, minor, numbers, digital ->
+                onSetSpeedometerConfig(max, segment, minor, numbers, digital)
                 speedometerSettingsOpen = false
             }
         )
@@ -581,7 +578,6 @@ private fun WidgetContextMenu(
     accent: Color,
     clockStyle: ClockStyle,
     vitalsAsBars: Boolean,
-    speedometerDigitalOnly: Boolean,
     carPlayPackage: String = "",
     androidAutoPackage: String = "",
     pipAppPackage: String = "",
@@ -595,7 +591,6 @@ private fun WidgetContextMenu(
     onClearPip: () -> Unit,
     onSetClockStyle: (ClockStyle) -> Unit,
     onSetVitalsAsBars: (Boolean) -> Unit,
-    onSetSpeedometerDigitalOnly: (Boolean) -> Unit,
     onOpenSpeedometerSettings: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -653,22 +648,6 @@ private fun WidgetContextMenu(
                 HorizontalDivider(color = menuDivider)
                 ContextRow("SPEEDOMETER SETTINGS", Icons.Default.Settings, accent,
                     onOpenSpeedometerSettings, isDayMode = isDayMode)
-                HorizontalDivider(color = menuDivider)
-                ContextRow(
-                    label   = "DIAL TRACK",
-                    icon    = Icons.Default.Speed,
-                    tint    = if (!speedometerDigitalOnly) accent else inactiveMenuTint,
-                    onClick = { onSetSpeedometerDigitalOnly(false); onDismiss() },
-                    isDayMode = isDayMode
-                )
-                HorizontalDivider(color = menuDivider)
-                ContextRow(
-                    label   = "DIGITAL ONLY",
-                    icon    = Icons.Default.Dialpad,
-                    tint    = if (speedometerDigitalOnly) accent else inactiveMenuTint,
-                    onClick = { onSetSpeedometerDigitalOnly(true); onDismiss() },
-                    isDayMode = isDayMode
-                )
             }
             if (widgetId == "NOW_PLAYING") {
                 HorizontalDivider(color = menuDivider)

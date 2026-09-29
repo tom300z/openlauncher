@@ -219,11 +219,11 @@ class MainActivity : ComponentActivity() {
                                         onRemoveWidget      = { id -> vm.removeWidget(id) },
                                         onSetClockStyle     = { style -> vm.updateSettings { copy(clockStyle = style) } },
                                         onSetVitalsAsBars   = { asBars -> vm.updateSettings { copy(vitalsAsBars = asBars) } },
-                                        onSetSpeedometerDigitalOnly = { digital -> vm.updateSettings { copy(speedometerDigitalOnly = digital) } },
-                                        onSetSpeedometerConfig = { max, segment, minor, numbers ->
+                                        onSetSpeedometerConfig = { max, segment, minor, numbers, digital ->
                                             vm.updateSettings {
                                                 copy(speedometerMaxKph = max, speedometerSegmentKph = segment,
-                                                    speedometerMinorTicks = minor, speedometerReferenceNumbers = numbers)
+                                                    speedometerMinorTicks = minor, speedometerReferenceNumbers = numbers,
+                                                    speedometerDigitalOnly = digital)
                                             }
                                         },
                                         onUpdateSoundPad    = { idx, pad -> vm.updateSoundboardPad(idx, pad) },

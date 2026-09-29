@@ -18,12 +18,13 @@ fun SpeedometerConfigDialog(
     accent: Color,
     isDayMode: Boolean,
     onDismiss: () -> Unit,
-    onSave: (Int, Int, Boolean, Boolean) -> Unit
+    onSave: (Int, Int, Boolean, Boolean, Boolean) -> Unit
 ) {
     var maxKph by remember { mutableIntStateOf(settings.speedometerMaxKph) }
     var segmentKph by remember { mutableIntStateOf(settings.speedometerSegmentKph) }
     var minorTicks by remember { mutableStateOf(settings.speedometerMinorTicks) }
     var numbers by remember { mutableStateOf(settings.speedometerReferenceNumbers) }
+    var digitalOnly by remember { mutableStateOf(settings.speedometerDigitalOnly) }
     val text = if (isDayMode) Color(0xFF111111) else Color.White
     val secondary = if (isDayMode) Color(0xFF6C757D) else Color(0xFF888888)
     ScrollableSettingsDialog(
@@ -33,11 +34,20 @@ fun SpeedometerConfigDialog(
         actions = {
             Spacer(Modifier.weight(1f))
             TextButton(onClick = onDismiss) { Text("CANCEL", color = secondary) }
-            TextButton(onClick = { onSave(maxKph, segmentKph, minorTicks, numbers) }) {
+            TextButton(onClick = { onSave(maxKph, segmentKph, minorTicks, numbers, digitalOnly) }) {
                 Text("SAVE", color = accent)
             }
         }
     ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Digital only", color = text)
+                Text("Hide the analogue dial", color = secondary)
+            }
+            Switch(checked = digitalOnly, onCheckedChange = { digitalOnly = it },
+                colors = SwitchDefaults.colors(checkedTrackColor = accent, checkedThumbColor = Color.Black))
+        }
+        Spacer(Modifier.height(16.dp))
         SpeedValueControl("Maximum speed", maxKph, 40, 400, text, accent) { maxKph = it }
         Text("Dial range only; the digital readout still displays higher speeds.", color = secondary)
         Spacer(Modifier.height(16.dp))
