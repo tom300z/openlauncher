@@ -59,6 +59,10 @@ class SettingsRepository(private val context: Context) {
         val SOUNDBOARD_PADS_JSON  = stringPreferencesKey("soundboard_pads_json")
         val VITALS_AS_BARS        = booleanPreferencesKey("vitals_as_bars")
         val SPEEDOMETER_DIGITAL_ONLY = booleanPreferencesKey("speedometer_digital_only")
+        val SPEEDOMETER_MAX_KPH = intPreferencesKey("speedometer_max_kph")
+        val SPEEDOMETER_SEGMENT_KPH = intPreferencesKey("speedometer_segment_kph")
+        val SPEEDOMETER_MINOR_TICKS = booleanPreferencesKey("speedometer_minor_ticks")
+        val SPEEDOMETER_REFERENCE_NUMBERS = booleanPreferencesKey("speedometer_reference_numbers")
         val GRADIENT_DIRECTION    = stringPreferencesKey("gradient_direction")
         val USE_CUSTOM_BG_COLOR   = booleanPreferencesKey("use_custom_bg_color")
         val SHOW_BATTERY          = booleanPreferencesKey("show_battery")
@@ -140,6 +144,10 @@ class SettingsRepository(private val context: Context) {
                 } ?: defaults.soundboardPads,
                 vitalsAsBars     = prefs[Keys.VITALS_AS_BARS] ?: defaults.vitalsAsBars,
                 speedometerDigitalOnly = prefs[Keys.SPEEDOMETER_DIGITAL_ONLY] ?: defaults.speedometerDigitalOnly,
+                speedometerMaxKph = (prefs[Keys.SPEEDOMETER_MAX_KPH] ?: defaults.speedometerMaxKph).coerceIn(40, 400),
+                speedometerSegmentKph = (prefs[Keys.SPEEDOMETER_SEGMENT_KPH] ?: defaults.speedometerSegmentKph).coerceIn(10, 100),
+                speedometerMinorTicks = prefs[Keys.SPEEDOMETER_MINOR_TICKS] ?: defaults.speedometerMinorTicks,
+                speedometerReferenceNumbers = prefs[Keys.SPEEDOMETER_REFERENCE_NUMBERS] ?: defaults.speedometerReferenceNumbers,
                 gradientDirection = prefs[Keys.GRADIENT_DIRECTION]?.let { runCatching { GradientDirection.valueOf(it) }.getOrNull() } ?: defaults.gradientDirection,
                 useCustomBackgroundColor = prefs[Keys.USE_CUSTOM_BG_COLOR] ?: defaults.useCustomBackgroundColor,
                 showBattery       = prefs[Keys.SHOW_BATTERY] ?: defaults.showBattery,
@@ -201,6 +209,10 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.SOUNDBOARD_PADS_JSON] = gson.toJson(s.soundboardPads)
             prefs[Keys.VITALS_AS_BARS]     = s.vitalsAsBars
             prefs[Keys.SPEEDOMETER_DIGITAL_ONLY] = s.speedometerDigitalOnly
+            prefs[Keys.SPEEDOMETER_MAX_KPH] = s.speedometerMaxKph.coerceIn(40, 400)
+            prefs[Keys.SPEEDOMETER_SEGMENT_KPH] = s.speedometerSegmentKph.coerceIn(10, 100)
+            prefs[Keys.SPEEDOMETER_MINOR_TICKS] = s.speedometerMinorTicks
+            prefs[Keys.SPEEDOMETER_REFERENCE_NUMBERS] = s.speedometerReferenceNumbers
             prefs[Keys.GRADIENT_DIRECTION] = s.gradientDirection.name
             prefs[Keys.USE_CUSTOM_BG_COLOR] = s.useCustomBackgroundColor
             prefs[Keys.SHOW_BATTERY]       = s.showBattery
