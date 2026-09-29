@@ -10,8 +10,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -33,8 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.openlauncher.app.ui.components.ScaledDialog as Dialog
-import androidx.compose.ui.window.DialogProperties
+import com.openlauncher.app.ui.components.ScrollableSettingsDialog
 import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
 import com.openlauncher.app.data.AppSettings
@@ -736,38 +733,22 @@ private fun BatteryConfigDialog(
     var curve by remember(selectedCurve) { mutableStateOf(selectedCurve) }
     var days by remember(historyDays) { mutableIntStateOf(historyDays.coerceIn(1, 365)) }
     var confirmClear by remember { mutableStateOf(false) }
-    val background = if (isDayMode) Color.White else Color(0xFF0C0C0C)
     val text = if (isDayMode) Color(0xFF111111) else Color.White
     val secondary = if (isDayMode) Color(0xFF6C757D) else Color(0xFF777777)
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
+    ScrollableSettingsDialog(
+        title = "BATTERY SETTINGS",
+        isDayMode = isDayMode,
+        onDismiss = onDismiss,
+        actions = {
+            TextButton(onClick = { confirmClear = true }) {
+                Text("CLEAR HISTORY", color = Color(0xFFE05252))
+            }
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onDismiss) { Text("CANCEL", color = secondary) }
+            TextButton(onClick = { onConfirm(curve, days) }) { Text("SAVE", color = accent) }
+        }
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize().padding(20.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                modifier = Modifier
-                    .widthIn(max = 520.dp)
-                    .fillMaxWidth()
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(background)
-                    .border(1.dp, if (isDayMode) Color(0xFFCCCCCC) else Color(0xFF242424), RoundedCornerShape(4.dp))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(18.dp)
-                ) {
-                    Text("BATTERY SETTINGS", color = text, fontSize = 13.sp, letterSpacing = 2.sp)
-                    Spacer(Modifier.height(12.dp))
                     Text("VOLTAGE CURVE", color = secondary, fontSize = 8.sp, letterSpacing = 1.sp)
                     Spacer(Modifier.height(5.dp))
                     BATTERY_CURVES.forEach { definition ->
@@ -814,21 +795,6 @@ private fun BatteryConfigDialog(
                         fontSize = 8.sp,
                         lineHeight = 11.sp
                     )
-                }
-                HorizontalDivider(color = if (isDayMode) Color(0xFFDDDDDD) else Color(0xFF242424))
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = { confirmClear = true }) {
-                        Text("CLEAR HISTORY", color = Color(0xFFE05252))
-                    }
-                    Spacer(Modifier.weight(1f))
-                    TextButton(onClick = onDismiss) { Text("CANCEL", color = secondary) }
-                    TextButton(onClick = { onConfirm(curve, days) }) { Text("SAVE", color = accent) }
-                }
-            }
-        }
     }
 
     if (confirmClear) {
