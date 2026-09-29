@@ -120,7 +120,10 @@ class LocationCompassManager(context: Context) {
         try {
             if (locationManager.allProviders.contains(LocationManager.GPS_PROVIDER)) {
                 locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER, 3000L, 5f, locationListener
+                    // A distance gate suppresses stationary fixes, leaving the
+                    // last moving speed on screen after stopping. Keep receiving
+                    // fixes at rest so the provider can report zero speed.
+                    LocationManager.GPS_PROVIDER, 1000L, 0f, locationListener
                 )
                 locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let {
                     locationListener.onLocationChanged(it)
