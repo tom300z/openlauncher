@@ -10,6 +10,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -30,7 +32,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.openlauncher.app.ui.components.ScaledDialog as Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
 import com.openlauncher.app.data.AppSettings
@@ -736,71 +740,93 @@ private fun BatteryConfigDialog(
     val text = if (isDayMode) Color(0xFF111111) else Color.White
     val secondary = if (isDayMode) Color(0xFF6C757D) else Color(0xFF777777)
 
-    Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .widthIn(min = 360.dp, max = 520.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(background)
-                .border(1.dp, if (isDayMode) Color(0xFFCCCCCC) else Color(0xFF242424), RoundedCornerShape(4.dp))
-                .padding(18.dp)
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().padding(20.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Text("BATTERY SETTINGS", color = text, fontSize = 13.sp, letterSpacing = 2.sp)
-            Spacer(Modifier.height(12.dp))
-            Text("VOLTAGE CURVE", color = secondary, fontSize = 8.sp, letterSpacing = 1.sp)
-            Spacer(Modifier.height(5.dp))
-            BATTERY_CURVES.forEach { definition ->
-                Row(
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 520.dp)
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(background)
+                    .border(1.dp, if (isDayMode) Color(0xFFCCCCCC) else Color(0xFF242424), RoundedCornerShape(4.dp))
+            ) {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { curve = definition.type }
-                        .padding(vertical = 2.dp),
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(18.dp)
+                ) {
+                    Text("BATTERY SETTINGS", color = text, fontSize = 13.sp, letterSpacing = 2.sp)
+                    Spacer(Modifier.height(12.dp))
+                    Text("VOLTAGE CURVE", color = secondary, fontSize = 8.sp, letterSpacing = 1.sp)
+                    Spacer(Modifier.height(5.dp))
+                    BATTERY_CURVES.forEach { definition ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { curve = definition.type }
+                                .padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = curve == definition.type,
+                                onClick = { curve = definition.type },
+                                colors = RadioButtonDefaults.colors(selectedColor = accent)
+                            )
+                            Text(definition.displayName, color = text, fontSize = 11.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text("HISTORY WINDOW", color = secondary, fontSize = 8.sp, letterSpacing = 1.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        IconButton(onClick = { days = (days - 1).coerceAtLeast(1) }) {
+                            Icon(Icons.Default.Remove, "Decrease days", tint = secondary)
+                        }
+                        Text(
+                            text = "$days DAYS",
+                            color = text,
+                            fontSize = 16.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.width(100.dp)
+                        )
+                        IconButton(onClick = { days = (days + 1).coerceAtMost(365) }) {
+                            Icon(Icons.Default.Add, "Increase days", tint = secondary)
+                        }
+                    }
+                    Text(
+                        "Readings are grouped into 6-second windows; only each window's highest voltage is retained.",
+                        color = secondary,
+                        fontSize = 8.sp,
+                        lineHeight = 11.sp
+                    )
+                }
+                HorizontalDivider(color = if (isDayMode) Color(0xFFDDDDDD) else Color(0xFF242424))
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    RadioButton(
-                        selected = curve == definition.type,
-                        onClick = { curve = definition.type },
-                        colors = RadioButtonDefaults.colors(selectedColor = accent)
-                    )
-                    Text(definition.displayName, color = text, fontSize = 11.sp)
+                    TextButton(onClick = { confirmClear = true }) {
+                        Text("CLEAR HISTORY", color = Color(0xFFE05252))
+                    }
+                    Spacer(Modifier.weight(1f))
+                    TextButton(onClick = onDismiss) { Text("CANCEL", color = secondary) }
+                    TextButton(onClick = { onConfirm(curve, days) }) { Text("SAVE", color = accent) }
                 }
-            }
-            Spacer(Modifier.height(8.dp))
-            Text("HISTORY WINDOW", color = secondary, fontSize = 8.sp, letterSpacing = 1.sp)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                IconButton(onClick = { days = (days - 1).coerceAtLeast(1) }) {
-                    Icon(Icons.Default.Remove, "Decrease days", tint = secondary)
-                }
-                Text(
-                    text = "$days DAYS",
-                    color = text,
-                    fontSize = 16.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.width(100.dp)
-                )
-                IconButton(onClick = { days = (days + 1).coerceAtMost(365) }) {
-                    Icon(Icons.Default.Add, "Increase days", tint = secondary)
-                }
-            }
-            Text(
-                "Readings are grouped into 6-second windows; only each window's highest voltage is retained.",
-                color = secondary,
-                fontSize = 8.sp,
-                lineHeight = 11.sp
-            )
-            Spacer(Modifier.height(14.dp))
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { confirmClear = true }) {
-                    Text("CLEAR HISTORY", color = Color(0xFFE05252))
-                }
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = onDismiss) { Text("CANCEL", color = secondary) }
-                TextButton(onClick = { onConfirm(curve, days) }) { Text("SAVE", color = accent) }
             }
         }
     }
